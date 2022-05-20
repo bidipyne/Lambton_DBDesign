@@ -3,119 +3,144 @@
 require_once "config.php";
  
 // Define variables and initialize with empty values
-$name = $address = $salary = "";
-$name_err = $address_err = $salary_err = "";
+$productName = $quantityOrdered = $priceEach =$date= "";
+$productName_err = $quantityOrdered_err = $priceEach_err =$date_err= "";
  
-// Processing form data when form is submitted
-if(isset($_POST["id"]) && !empty($_POST["id"])){
+// Processing form data when form is submitted  
+if(isset($_POST["orderNumber"]) && !empty($_POST["orderNumber"])&&isset($_POST["orderLineNumber"])&& !empty($_POST["orderLineNumber"])){
+  
     // Get hidden input value
-    $id = $_POST["id"];
-    
-    // Validate name
+    $orderNumber = $_POST["orderNumber"];
+    $orderLineNumber = $_POST["orderLineNumber"];
+  
+ // Validate Order Date
+ $input_date = trim($_POST["date"]);
+ $test_arr  = explode('-', $input_date);
+
+ if(empty($input_date)){
+     $date_err = "Please enter Order Date.";
+ }  elseif(checkdate($test_arr[0], $test_arr[1], $test_arr[2])){
+    $date_err = "Please enter a valid Date.";
+ } 
+ else{
+     $date = $input_date;
+ }
+    // Validate Product name
     $input_name = trim($_POST["name"]);
     if(empty($input_name)){
-        $name_err = "Please enter a name.";
-    } elseif(!filter_var($input_name, FILTER_VALIDATE_REGEXP, array("options"=>array("regexp"=>"/^[a-zA-Z\s]+$/")))){
-        $name_err = "Please enter a valid name.";
-    } else{
-        $name = $input_name;
+        $productName_err = "Please enter a product name.";
+    } 
+    //elseif(!filter_var($input_name, FILTER_VALIDATE_REGEXP, array("options"=>array("regexp"=>"/^[a-zA-Z\s]+$/")))){
+      //  $productName_err = "Please enter a valid name.";
+    //} 
+    else{
+        $productName = $input_name;
     }
     
-    // Validate address address
-    $input_address = trim($_POST["address"]);
-    if(empty($input_address)){
-        $address_err = "Please enter an address.";     
-    } else{
-        $address = $input_address;
-    }
-    
-    // Validate salary
-    $input_salary = trim($_POST["salary"]);
-    if(empty($input_salary)){
-        $salary_err = "Please enter the salary amount.";     
-    } elseif(!ctype_digit($input_salary)){
-        $salary_err = "Please enter a positive integer value.";
-    } else{
-        $salary = $input_salary;
+   
+
+     // Validate Quantity Ordered
+     $input_quantityOrdered = trim($_POST["quantityOrdered"]);
+     if(empty($input_quantityOrdered)){
+         $quantityOrdered_err = "Please enter the Quantity Ordered";     
+     } elseif(!ctype_digit($input_quantityOrdered)){
+         $quantityOrdered_err = "Please enter a positive integer value.";
+     } else{
+         $quantityOrdered = $input_quantityOrdered;
+     }
+    // Validate priceEach
+    $input_priceEach = trim($_POST["priceEach"]);
+    if(empty($input_priceEach)){
+        $priceEach_err = "Please enter the price each.";     
+    }// elseif(!ctype_alnum($input_priceEach)){
+       //// $priceEach_err = "Please enter a positive integer value.";
+    //} 
+    else{
+        $priceEach = $input_priceEach;
     }
     
     // Check input errors before inserting in database
-    if(empty($name_err) && empty($address_err) && empty($salary_err)){
+    if(empty($productName_err) && empty($quantityOrdered_err) && empty($priceEach_err)){
         // Prepare an update statement
-        $sql = "UPDATE employee SET name=?, address=?, salary=? WHERE id=?";
-         
+      $sql = "UPDATE orders JOIN orderdetails ON orders.orderNumber= orderdetails.orderNumber 
+      INNER JOIN products on products.productCode=orderdetails.productCode SET products.productName=?,
+      orderdetails.quantityOrdered =?,orderdetails.priceEach=?,orders.orderDate=? 
+      WHERE orders.orderNumber=? and orderdetails.orderLineNumber=?";
+      
+        
         if($stmt = mysqli_prepare($link, $sql)){
             // Bind variables to the prepared statement as parameters
-            mysqli_stmt_bind_param($stmt, "sssi", $param_name, $param_address, $param_salary, $param_id);
+            mysqli_stmt_bind_param($stmt, "ssssii",$param_productName,$param_quantityOrdered, $param_priceEach,$param_orderDate, $param_id,$param_orderLineNumber);
             
             // Set parameters
-            $param_name = $name;
-            $param_address = $address;
-            $param_salary = $salary;
-            $param_id = $id;
-            
+            $param_productName = $productName;
+            $param_quantityOrdered = $quantityOrdered;
+            $param_priceEach = $priceEach;
+            $param_orderDate= date("Y-m-d", strtotime($date)); 
+            $param_id = $orderNumber;
+            $param_orderLineNumber = $orderLineNumber;
+           
             // Attempt to execute the prepared statement
             if(mysqli_stmt_execute($stmt)){
+                
                 // Records updated successfully. Redirect to landing page
                 header("location: index.php");
                 exit();
             } else{
+                
                 echo "Something went wrong. Please try again later.";
             }
+            mysqli_stmt_close($stmt);
+        }else {
+            echo "Something's wrong with the query: " . mysqli_error($link);
         }
-         
-        // Close statement
-        mysqli_stmt_close($stmt);
     }
     
     // Close connection
     mysqli_close($link);
 } else{
     // Check existence of id parameter before processing further
-    if(isset($_GET["orderNumber"]) && !empty(trim($_GET["orderNumber"]))){
+    if(isset($_GET["orderNumber"]) && !empty(trim($_GET["orderNumber"]))&&isset($_GET["orderLineNumber"]) && !empty(trim($_GET["orderLineNumber"]))){
         // Get URL parameter
-        $id =  trim($_GET["orderNumber"]);
-        
+        $orderNumber =  trim($_GET["orderNumber"]);
+        $orderLineNumber =  trim($_GET["orderLineNumber"]);
         // Prepare a select statement
-        $sql = "SELECT 
-            orderNumber,
-            orderDate,
-            orderLineNumber,
-            productName,
-            quantityOrdered,
-            priceEach
-        FROM
-            orders
-        INNER JOIN
-            orderdetails USING (orderNumber)
-        INNER JOIN
-            products USING (productCode)
-        ORDER BY 
-            orderNumber, 
-            orderLineNumber;
-        WHERE orderNumber = ?";
+       
+        $sql = "SELECT * from orders INNER JOIN orderdetails on orders.orderNumber=orderdetails.orderNumber INNER JOIN products on products.productCode=orderdetails.productCode where orders.orderNumber=? and orderdetails.orderLineNumber=?";
+      
+        
         if($stmt = mysqli_prepare($link, $sql)){
+             
+             
             // Bind variables to the prepared statement as parameters
-            mysqli_stmt_bind_param($stmt, "i", $param_id);
-            
+            mysqli_stmt_bind_param($stmt, "ii", $param_id,$param_orderLineNumber);
+           
             // Set parameters
-            $param_id = $id;
-            
+            $param_id = $orderNumber;
+              $param_orderLineNumber=$orderLineNumber;
+           
             // Attempt to execute the prepared statement
             if(mysqli_stmt_execute($stmt)){
                 $result = mysqli_stmt_get_result($stmt);
-    
-                if(mysqli_num_rows($result) == 1){
+                $fsk=mysqli_num_rows($result);
+                if(mysqli_num_rows($result) >0){
+                   
                     /* Fetch result row as an associative array. Since the result set
                     contains only one row, we don't need to use while loop */
                     $row = mysqli_fetch_array($result, MYSQLI_ASSOC);
-                    
+                   
+                  
                     // Retrieve individual field value
-                    $name = $row["name"];
-                    $address = $row["address"];
-                    $salary = $row["salary"];
+                    $test_date = $row["orderDate"];
+                   // $date= date("d-m-Y", strtotime($test_date)); 
+                    $date=$row["orderDate"];
+                    //echo "Something's wrong with the query: " .$date ;
+                    $productName = $row["productName"];
+                    $quantityOrdered = $row["quantityOrdered"];
+                    $priceEach = $row["priceEach"];
                 } else{
                     // URL doesn't contain valid id. Redirect to error page
+                    //echo "Something's wrong with the query: " .$fsk . mysqli_error($link) ;
                     header("location: error.php");
                     exit();
                 }
@@ -123,10 +148,13 @@ if(isset($_POST["id"]) && !empty($_POST["id"])){
             } else{
                 echo "Oops! Something went wrong. Please try again later.";
             }
+            mysqli_stmt_close($stmt);
+        }else {
+            echo "Something's wrong with the query: " . mysqli_error($link);
         }
         
         // Close statement
-        mysqli_stmt_close($stmt);
+        
         
         // Close connection
         mysqli_close($link);
@@ -161,22 +189,29 @@ if(isset($_POST["id"]) && !empty($_POST["id"])){
                     </div>
                     <p>Please edit the input values and submit to update the record.</p>
                     <form action="<?php echo htmlspecialchars(basename($_SERVER['REQUEST_URI'])); ?>" method="post">
-                        <div class="form-group <?php echo (!empty($name_err)) ? 'has-error' : ''; ?>">
-                            <label>Name</label>
-                            <input type="text" name="name" class="form-control" value="<?php echo $name; ?>">
-                            <span class="help-block"><?php echo $name_err;?></span>
+                    <div class="form-group <?php echo (!empty($date_err)) ? 'has-error' : ''; ?>">
+                            <label>Order Date</label>
+                            <input type="date" name="date" class="form-control"  value="<?php echo $date; ?>">
+                            <span class="help-block"><?php echo $date_err;?></span>
                         </div>
-                        <div class="form-group <?php echo (!empty($address_err)) ? 'has-error' : ''; ?>">
-                            <label>Address</label>
-                            <textarea name="address" class="form-control"><?php echo $address; ?></textarea>
-                            <span class="help-block"><?php echo $address_err;?></span>
+                        <div class="form-group <?php echo (!empty($productName_err)) ? 'has-error' : ''; ?>">
+                            <label>Product Name</label>
+                            <input type="text" name="name" class="form-control" value="<?php echo $productName; ?>">
+                            <span class="help-block"><?php echo $productName_err;?></span>
                         </div>
-                        <div class="form-group <?php echo (!empty($salary_err)) ? 'has-error' : ''; ?>">
-                            <label>Salary</label>
-                            <input type="text" name="salary" class="form-control" value="<?php echo $salary; ?>">
-                            <span class="help-block"><?php echo $salary_err;?></span>
+                        <div class="form-group <?php echo (!empty($quantityOrdered_err)) ? 'has-error' : ''; ?>">
+                          <label>Price Each</label>
+                            <input type="text" name="quantityOrdered" class="form-control" value="<?php echo $quantityOrdered; ?>">
+                            <span class="help-block"><?php echo $quantityOrdered_err;?></span>
                         </div>
-                        <input type="hidden" name="id" value="<?php echo $id; ?>"/>
+                        <div class="form-group <?php echo (!empty($priceEach_err)) ? 'has-error' : ''; ?>">
+                            
+                            <label>Quantity Ordered</label>
+                            <input type="text" name="priceEach" class="form-control" value="<?php echo $priceEach; ?>">
+                            <span class="help-block"><?php echo $priceEach_err;?></span>
+                        </div>
+                        <input type="hidden" name="orderNumber" value="<?php echo $orderNumber; ?>"/>
+                        <input type="hidden" name="orderLineNumber" value="<?php echo $orderLineNumber; ?>"/>
                         <input type="submit" class="btn btn-primary" value="Submit">
                         <a href="index.php" class="btn btn-default">Cancel</a>
                     </form>
