@@ -81,8 +81,10 @@
                                         echo "<td>";
                                         echo "<a href='read.php?orderNumber=". $row['orderNumber'] ."&orderLineNumber=". $row['orderLineNumber'] ."' title='View Record' 	
                                         data-toggle='tooltip'><span class='glyphicon glyphicon-eye-open'></span></a>";
-                                        echo "<a href='update.php?orderNumber=". $row['orderNumber'] ."&orderLineNumber=". $row['orderLineNumber']."' title='Update Record' data-toggle='tooltip'><span class='glyphicon glyphicon-pencil'></span></a>";
-                                        echo "<a href='delete.php?orderNumber=". $row['orderNumber'] ."' title='Delete Record' data-toggle='tooltip'><span class='glyphicon glyphicon-trash'></span></a>";
+                                        echo "<a href='update.php?orderNumber=". $row['orderNumber'] ."&orderLineNumber=". $row['orderLineNumber']."' title='Update Record' 
+                                        data-toggle='tooltip'><span class='glyphicon glyphicon-pencil'></span></a>";
+                                        echo "<a href='delete.php?orderNumber=". $row['orderNumber'] ."&orderLineNumber=". $row['orderLineNumber']."&productName=". $row['productName']."' title='Delete Record' 
+                                        data-toggle='tooltip'><span class='glyphicon glyphicon-trash'></span></a>";
                                         echo "</td>";
                                     echo "</tr>";
                                 }

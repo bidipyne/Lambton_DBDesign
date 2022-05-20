@@ -1,18 +1,23 @@
 <?php
 // Process delete operation after confirmation
-if(isset($_POST["orderNumber"]) && !empty($_POST["orderNumber"])){
+if((isset($_POST["orderNumber"]) && !empty($_POST["orderNumber"])) &&
+(isset($_POST["orderLineNumber"]) && !empty($_POST["orderLineNumber"]))){
     // Include config file
     require_once "config.php";
     
     // Prepare a delete statement
-    $sql = "DELETE FROM orderdetails WHERE orderNumber = ?";
+    $sql = "DELETE products, orderdetails, orders FROM orders 
+            INNER JOIN orderdetails ON orders.orderNumber= orderdetails.orderNumber 
+            INNER JOIN products on products.productCode=orderdetails.productCode 
+            WHERE orders.orderNumber = ? AND orderdetails.orderLineNumber = ?";
     
     if($stmt = mysqli_prepare($link, $sql)){
         // Bind variables to the prepared statement as parameters
-        mysqli_stmt_bind_param($stmt, "i", $param_id);
+        mysqli_stmt_bind_param($stmt, "ii", $param_id, $param_orderLineNumber);
         
         // Set parameters
         $param_id = trim($_POST["orderNumber"]);
+        $param_orderLineNumber = trim($_POST["orderLineNumber"]);
         
         // Attempt to execute the prepared statement
         if(mysqli_stmt_execute($stmt)){
@@ -31,7 +36,7 @@ if(isset($_POST["orderNumber"]) && !empty($_POST["orderNumber"])){
     mysqli_close($link);
 } else{
     // Check existence of id parameter
-    if(empty(trim($_GET["orderNumber"]))){
+    if(empty(trim($_GET["orderNumber"])) || empty(trim($_GET["orderLineNumber"]))){
         // URL doesn't contain id parameter. Redirect to error page
         header("location: error.php");
         exit();
@@ -61,7 +66,8 @@ if(isset($_POST["orderNumber"]) && !empty($_POST["orderNumber"])){
                     </div>
                     <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
                         <div class="alert alert-danger fade in">
-                            <input type="hidden" name="id" value="<?php echo trim($_GET["orderNumber"]); ?>"/>
+                            <input type="hidden" name="orderNumber" value="<?php echo trim($_GET["orderNumber"]); ?>"/>
+                            <input type="hidden" name="orderLineNumber" value="<?php echo trim($_GET["orderLineNumber"]); ?>"/>
                             <p>Are you sure you want to delete this record?</p><br>
                             <p>
                                 <input type="submit" value="Yes" class="btn btn-danger">
